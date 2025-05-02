@@ -1,0 +1,12 @@
+# backend/.flake8
+[flake8]
+# Set the maximum line length (e.g., 88 to match Black, or 120)
+max-line-length = 88
+# You can ignore specific error codes if needed:
+# ignore = E203, E501, W503
+# Exclude directories like the virtual environment or migrations
+exclude =
+    .git,
+    __pycache__,
+    venv,
+    alembic/versions/
