@@ -1,0 +1,1 @@
+import{_ as t,e as o,i as a,f as s}from"./CGV98fjM.js";const n={};function r(l,e){return s(),o("section",null,e[0]||(e[0]=[a("p",null,"This page will be displayed at the /about route.",-1)]))}const i=t(n,[["render",r]]);export{i as default};
