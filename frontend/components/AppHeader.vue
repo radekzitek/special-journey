@@ -47,6 +47,7 @@
     >
       <div class="bg-white text-black p-6 rounded shadow w-80">
         <h2 class="text-lg font-bold mb-2">Login</h2>
+        <AppAlert :message="errorMessage" @close="clearError" />
         <form
           @submit.prevent="
             login(
@@ -61,6 +62,7 @@
             placeholder="Email"
             class="border p-2 w-full mb-2"
             required
+            autocomplete="email"
           />
           <input
             name="password"
@@ -68,6 +70,7 @@
             placeholder="Password"
             class="border p-2 w-full mb-2"
             required
+            autocomplete="current-password"
           />
           <div class="flex justify-between">
             <button
@@ -104,6 +107,7 @@
     >
       <div class="bg-white text-black p-6 rounded shadow w-80">
         <h2 class="text-lg font-bold mb-2">Register</h2>
+        <AppAlert :message="errorMessage" @close="clearError" />
         <form
           @submit.prevent="
             register(
@@ -118,6 +122,7 @@
             placeholder="Email"
             class="border p-2 w-full mb-2"
             required
+            autocomplete="email"
           />
           <input
             name="password"
@@ -125,6 +130,7 @@
             placeholder="Password"
             class="border p-2 w-full mb-2"
             required
+            autocomplete="new-password"
           />
           <div class="flex justify-between">
             <button
@@ -152,6 +158,7 @@
     >
       <div class="bg-white text-black p-6 rounded shadow w-80">
         <h2 class="text-lg font-bold mb-2">Reset Password</h2>
+        <AppAlert :message="errorMessage" @close="clearError" />
         <form @submit.prevent="resetPassword((($event.target as HTMLFormElement)?.email?.value) || '')">
           <input
             name="email"
@@ -159,6 +166,7 @@
             placeholder="Email"
             class="border p-2 w-full mb-2"
             required
+            autocomplete="email"
           />
           <div class="flex justify-between">
             <button
@@ -182,6 +190,7 @@
 </template>
 
 <script setup lang="ts">
+import AppAlert from "~/components/AppAlert.vue";
 import { useAuth } from "~/composables/useAuth";
 
 const {
@@ -194,7 +203,12 @@ const {
   register,
   logout,
   resetPassword,
+  errorMessage
 } = useAuth();
+
+function clearError() {
+  errorMessage.value = null;
+}
 </script>
 
 <style scoped></style>
