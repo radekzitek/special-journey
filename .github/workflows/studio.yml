@@ -46,6 +46,8 @@ jobs:
           echo "package_manager=$package_manager" >> $GITHUB_OUTPUT
 
       - uses: pnpm/action-setup@v4
+        with:
+          version: 8
         if: ${{ steps.pkgman.outputs.package_manager == 'pnpm' }}
         name: Install pnpm
         id: pnpm-install
