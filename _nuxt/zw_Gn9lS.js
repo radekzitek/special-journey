@@ -1,0 +1,1 @@
+import{_ as s,e as a,f as c,h as e,C as p,K as o}from"./CaDeyL6p.js";const _={};function l(t,d){const n=o("AppHeader"),r=o("AppFooter");return c(),a("div",null,[e(n),p(t.$slots,"default"),e(r)])}const m=s(_,[["render",l]]);export{m as default};
