@@ -7,6 +7,8 @@
         <div><a href="https://nuxt.studio/">Nuxt Studio</a></div>
         <div><a href="https://tailwindcss.com/">TailwindCSS</a></div>
         <div><a href="https://iconify.design/">Iconify</a></div>
+        <div><a href="https://fastapi.tiangolo.com/">FastAPI</a></div>
+        <div><a href="https://www.sqlalchemy.org/">SQLAlchemy</a></div>
       </div>
     </div>
   </template>
