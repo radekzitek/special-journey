@@ -1,6 +1,6 @@
 <!-- eslint-disable vue/html-self-closing -->
 <template>
-  <div v-if="show" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+  <div v-if="show && clientReady" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
     <div class="bg-white text-black p-6 rounded shadow w-80">
       <h2 class="text-lg font-bold mb-2">{{ title }}</h2>
       <AppAlert :message="errorMessage" @close="clearError" />
@@ -46,7 +46,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import AppAlert from './AppAlert.vue';
 
 const props = defineProps<{
@@ -60,6 +60,9 @@ const emit = defineEmits(['submit', 'close', 'clearError']);
 const email = ref('');
 const password = ref('');
 const confirm = ref('');
+const clientReady = ref(false);
+
+onMounted(() => { clientReady.value = true; });
 
 watch(() => props.show, (val) => {
   if (val) {

@@ -19,7 +19,7 @@
     </div>
 
     <RegisterModal
-      :show="showCreateUser"
+      :show="showCreateUser && clientReady"
       title="Create User"
       submit-label="Create"
       :error-message="createUserError"
@@ -29,17 +29,22 @@
     />
 
     <!-- User Details/Edit -->
-    <div v-if="selectedUser" class="w-full md:w-2/3">
+    <div v-if="selectedUser && clientReady" class="w-full md:w-2/3">
       <NuxtCard>
         <template #header>
           <div class="font-bold">User Details</div>
         </template>
         <div class="flex flex-col gap-4">
-          <NuxtInput v-model="form.email" label="Email" />
-          <NuxtInput v-model="form.role" label="Role" />
-          <NuxtInput v-model="form.is_active" label="Status" />
-          <NuxtInput :model-value="form.created_at" label="Created At" disabled />
-          <NuxtInput :model-value="form.updated_at" label="Updated At" disabled />
+          <label for="email">Email</label>
+          <NuxtInput id="email" v-model="form.email" label="Email" />
+          <label for="role">Role</label>
+          <NuxtSelect id="role" v-model="form.role" :options="roles" option-label="label" option-value="value" />
+          <label for="is_active">Status</label>
+          <NuxtSelect id="is_active" v-model="form.is_active" :options="activeOptions" option-label="label" option-value="value" />
+          <label for="created_at">Created At</label>
+          <NuxtInput id="created_at" :model-value="form.created_at" label="Created At" disabled />
+          <label for="updated_at">Updated At</label>
+          <NuxtInput id="updated_at" :model-value="form.updated_at" label="Updated At" disabled />
         </div>
         <template #footer>
           <div class="flex gap-2 justify-end mt-4">
@@ -64,6 +69,17 @@ const creating = ref(false);
 const form = reactive({ email: '', role: '', is_active: true, created_at: '', updated_at: '' });
 const showCreateUser = ref(false);
 const createUserError = ref<string | null>(null);
+const clientReady = ref(false);
+
+const roles = [
+  { label: 'Member', value: 'member' },
+  { label: 'Manager', value: 'manager' },
+  { label: 'Admin', value: 'admin' }
+];
+const activeOptions = [
+  { label: 'Active', value: true },
+  { label: 'Inactive', value: false }
+];
 
 async function fetchUsers() {
   if (!token.value) return;
@@ -76,20 +92,29 @@ async function fetchUsers() {
 function selectUser(u) {
   creating.value = false;
   selectedUser.value = u;
-  Object.assign(form, u);
+  // Make a clean copy of the user object and ensure proper data types
+  form.email = u.email;
+  form.role = u.role || 'member'; // Ensure role has a default value if null
+  form.is_active = typeof u.is_active === 'boolean' ? u.is_active : true;
+  form.created_at = u.created_at;
+  form.updated_at = u.updated_at;
 }
-
-// Removed unused startCreate function
 
 async function updateUser() {
   if (!token.value || !selectedUser.value) return;
+  const userData = {
+    email: form.email,
+    role: form.role,
+    is_active: form.is_active
+  };
+  
   await fetch(`http://localhost:8000/users/${selectedUser.value.id}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token.value}`
     },
-    body: JSON.stringify(form)
+    body: JSON.stringify(userData)
   });
   await fetchUsers();
 }
@@ -153,7 +178,10 @@ function clearSelection() {
   form.updated_at = '';
 }
 
-onMounted(fetchUsers);
+onMounted(() => { 
+  clientReady.value = true; 
+  fetchUsers();
+});
 </script>
 
 <style scoped>

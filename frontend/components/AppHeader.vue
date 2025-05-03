@@ -12,31 +12,37 @@
       AI Performance Hub
     </div>
     <div>
-      <template v-if="!isAuthenticated">
-        <button
-          class="text-white bg-green-600 px-3 py-1 rounded me-2"
-          @click="showLogin = true"
-        >
-          Login
-        </button>
-        <button
-          class="text-white bg-blue-600 px-3 py-1 rounded"
-          @click="showRegister = true"
-        >
-          Register
-        </button>
+      <template v-if="clientReady">
+        <template v-if="!isAuthenticated">
+          <button
+            class="text-white bg-green-600 px-3 py-1 rounded me-2"
+            @click="showLogin = true"
+          >
+            Login
+          </button>
+          <button
+            class="text-white bg-blue-600 px-3 py-1 rounded"
+            @click="showRegister = true"
+          >
+            Register
+          </button>
+        </template>
+        <template v-else>
+          <span class="me-2">{{ user?.email }}</span>
+          <button
+            class="text-white bg-gray-600 px-3 py-1 rounded me-2"
+            @click="showReset = true"
+          >
+            Reset Password
+          </button>
+          <button class="text-white bg-red-600 px-3 py-1 rounded" @click="logout">
+            Logout
+          </button>
+        </template>
       </template>
       <template v-else>
-        <span class="me-2">{{ user?.email }}</span>
-        <button
-          class="text-white bg-gray-600 px-3 py-1 rounded me-2"
-          @click="showReset = true"
-        >
-          Reset Password
-        </button>
-        <button class="text-white bg-red-600 px-3 py-1 rounded" @click="logout">
-          Logout
-        </button>
+        <!-- Empty placeholder during SSR -->
+        <span class="opacity-0">Loading...</span>
       </template>
     </div>
 
@@ -202,7 +208,7 @@
 <script setup lang="ts">
 import AppAlert from "~/components/AppAlert.vue";
 import { useAuth } from "~/composables/useAuth";
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 
 const {
   isAuthenticated,
@@ -233,6 +239,9 @@ function registerHandler(e: Event) {
   }
   register(regEmail.value, regPassword.value);
 }
+
+const clientReady = ref(false);
+onMounted(() => { clientReady.value = true; });
 </script>
 
 <style scoped></style>
