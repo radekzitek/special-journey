@@ -6,11 +6,13 @@
       <span v-if="isAuthenticated">You are logged in as {{ user?.email }}</span>
       <span v-else>No user is authenticated</span>
     </div>
+    <UserManager v-if="isAuthenticated" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { useAuth } from '~/composables/useAuth';
+import UserManager from '~/components/UserManager.vue';
 const { isAuthenticated, user } = useAuth();
 </script>
 

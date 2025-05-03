@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import auth
+from app.routers import auth, users
 from app.models import Base
 from app.database import engine
 
@@ -24,3 +24,4 @@ async def on_startup():
         await conn.run_sync(Base.metadata.create_all)
 
 app.include_router(auth.router)
+app.include_router(users.router)
