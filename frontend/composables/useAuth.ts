@@ -16,7 +16,15 @@ if (typeof window !== 'undefined') {
   if (savedToken) {
     token.value = savedToken
     isAuthenticated.value = true
-    // Optionally, decode token to get user email
+    // Decode JWT to get user email
+    try {
+      const payload = JSON.parse(atob(savedToken.split('.')[1]))
+      if (payload && payload.sub) {
+        user.value = { email: payload.sub }
+      }
+    } catch {
+      user.value = null
+    }
   }
 }
 

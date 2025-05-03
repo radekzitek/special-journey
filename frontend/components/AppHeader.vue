@@ -108,15 +108,9 @@
       <div class="bg-white text-black p-6 rounded shadow w-80">
         <h2 class="text-lg font-bold mb-2">Register</h2>
         <AppAlert :message="errorMessage" @close="clearError" />
-        <form
-          @submit.prevent="
-            register(
-              ($event.target as HTMLFormElement)?.email?.value,
-              ($event.target as HTMLFormElement)?.password?.value
-            )
-          "
-        >
+        <form @submit.prevent="registerHandler">
           <input
+            v-model="regEmail"
             name="email"
             type="email"
             placeholder="Email"
@@ -125,9 +119,19 @@
             autocomplete="email"
           />
           <input
+            v-model="regPassword"
             name="password"
             type="password"
             placeholder="Password"
+            class="border p-2 w-full mb-2"
+            required
+            autocomplete="new-password"
+          />
+          <input
+            v-model="regConfirm"
+            name="confirm"
+            type="password"
+            placeholder="Confirm Password"
             class="border p-2 w-full mb-2"
             required
             autocomplete="new-password"
@@ -159,7 +163,13 @@
       <div class="bg-white text-black p-6 rounded shadow w-80">
         <h2 class="text-lg font-bold mb-2">Reset Password</h2>
         <AppAlert :message="errorMessage" @close="clearError" />
-        <form @submit.prevent="resetPassword((($event.target as HTMLFormElement)?.email?.value) || '')">
+        <form
+          @submit.prevent="
+            resetPassword(
+              ($event.target as HTMLFormElement)?.email?.value || ''
+            )
+          "
+        >
           <input
             name="email"
             type="email"
@@ -192,6 +202,7 @@
 <script setup lang="ts">
 import AppAlert from "~/components/AppAlert.vue";
 import { useAuth } from "~/composables/useAuth";
+import { ref } from "vue";
 
 const {
   isAuthenticated,
@@ -203,11 +214,24 @@ const {
   register,
   logout,
   resetPassword,
-  errorMessage
+  errorMessage,
 } = useAuth();
 
 function clearError() {
   errorMessage.value = null;
+}
+
+const regEmail = ref("");
+const regPassword = ref("");
+const regConfirm = ref("");
+
+function registerHandler(e: Event) {
+  e.preventDefault();
+  if (regPassword.value !== regConfirm.value) {
+    errorMessage.value = "Passwords do not match";
+    return;
+  }
+  register(regEmail.value, regPassword.value);
 }
 </script>
 
