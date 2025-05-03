@@ -1,1 +1,0 @@
-import{A as t}from"./CbknSJ5d.js";import{_ as n,e as r,i as s,h as a,f as c}from"./CnND5JuG.js";const l={};function p(m,e){const o=t;return c(),r("div",null,[e[0]||(e[0]=s("h1",null,"Welcome to the homepage",-1)),a(o,{message:null})])}const d=n(l,[["render",p]]);export{d as default};
