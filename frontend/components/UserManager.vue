@@ -11,7 +11,7 @@
           <ul>
             <li v-for="u in users" :key="u.id" class="flex items-center justify-between border-b py-2">
               <span class="cursor-pointer" @click="selectUser(u)">{{ u.email }}</span>
-              <NuxtButton color="red" size="xs" icon="i-heroicons-trash" @click="deleteUser(u.id)" />
+              <NuxtButton color="red" size="xs" icon="i-heroicons-trash" @click="handleDeleteUser(u.id)" />
             </li>
           </ul>
         </div>
@@ -48,7 +48,7 @@
         </div>
         <template #footer>
           <div class="flex gap-2 justify-end mt-4">
-            <NuxtButton color="primary" icon="i-heroicons-check" @click="updateUser">Update</NuxtButton>
+            <NuxtButton color="primary" icon="i-heroicons-check" @click="handleUpdateUser">Update</NuxtButton>
             <NuxtButton color="gray" @click="clearSelection">Cancel</NuxtButton>
           </div>
         </template>
@@ -58,124 +58,102 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
-import { useAuth } from '~/composables/useAuth';
+import { ref, onMounted } from 'vue';
+import { useUserForm } from '~/composables/useUserForm';
 import RegisterModal from '~/components/RegisterModal.vue';
 
-const { token } = useAuth();
+const { 
+  form, 
+  roles, 
+  activeOptions, 
+  setFormData, 
+  clearForm, 
+  updateUser, 
+  deleteUser, 
+  fetchUserData,
+  createUser 
+} = useUserForm();
+
 const users = ref([]);
 const selectedUser = ref(null);
-const creating = ref(false);
-const form = reactive({ email: '', role: '', is_active: true, created_at: '', updated_at: '' });
 const showCreateUser = ref(false);
 const createUserError = ref<string | null>(null);
 const clientReady = ref(false);
 
-const roles = [
-  { label: 'Member', value: 'member' },
-  { label: 'Manager', value: 'manager' },
-  { label: 'Admin', value: 'admin' }
-];
-const activeOptions = [
-  { label: 'Active', value: true },
-  { label: 'Inactive', value: false }
-];
-
+// Fetch all users
 async function fetchUsers() {
-  if (!token.value) return;
-  const res = await fetch('http://localhost:8000/users', {
-    headers: { Authorization: `Bearer ${token.value}` }
-  });
-  if (res.ok) users.value = await res.json();
-}
-
-function selectUser(u) {
-  creating.value = false;
-  selectedUser.value = u;
-  // Make a clean copy of the user object and ensure proper data types
-  form.email = u.email;
-  form.role = u.role || 'member'; // Ensure role has a default value if null
-  form.is_active = typeof u.is_active === 'boolean' ? u.is_active : true;
-  form.created_at = u.created_at;
-  form.updated_at = u.updated_at;
-}
-
-async function updateUser() {
-  if (!token.value || !selectedUser.value) return;
-  const userData = {
-    email: form.email,
-    role: form.role,
-    is_active: form.is_active
-  };
-  
-  await fetch(`http://localhost:8000/users/${selectedUser.value.id}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token.value}`
-    },
-    body: JSON.stringify(userData)
-  });
-  await fetchUsers();
-}
-
-async function deleteUser(id) {
-  if (!token.value) return;
-  await fetch(`http://localhost:8000/users/${id}`, {
-    method: 'DELETE',
-    headers: { Authorization: `Bearer ${token.value}` }
-  });
-  if (selectedUser.value && selectedUser.value.id === id) clearSelection();
-  await fetchUsers();
-}
-
-async function createUser(email: string, password: string) {
-  if (!token.value) return;
-  try {
-    const res = await fetch('http://localhost:8000/users', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token.value}`
-      },
-      body: JSON.stringify({ email, password })
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.detail || 'User creation failed');
-    }
-    showCreateUser.value = false;
-    createUserError.value = null;
-    await fetchUsers();
-  } catch (e: unknown) {
-    if (e instanceof Error) {
-      createUserError.value = e.message || 'User creation failed';
-    } else {
-      createUserError.value = 'User creation failed';
-    }
+  const userData = await fetchUserData(true); // true = fetch all users
+  if (userData) {
+    users.value = userData;
   }
 }
 
-function handleCreateUserSubmit({ email, password, error }: { email?: string, password?: string, error?: string }) {
+// Select a user for editing
+function selectUser(user) {
+  console.log('Selected user:', user);
+  selectedUser.value = user;
+  setFormData(user);
+  console.log('Form after selection:', form);
+}
+
+// Clear selection
+function clearSelection() {
+  selectedUser.value = null;
+  clearForm();
+}
+
+// Handle user update
+async function handleUpdateUser() {
+  if (!selectedUser.value) return;
+  
+  console.log('Updating user ID:', selectedUser.value.id);
+  const success = await updateUser(selectedUser.value.id);
+  
+  if (success) {
+    // Refresh the user list to show updated data
+    await fetchUsers();
+    // Re-select the current user to refresh the form with updated data
+    const updatedUserList = users.value;
+    const updatedUser = updatedUserList.find(u => u.id === selectedUser.value.id);
+    if (updatedUser) {
+      selectUser(updatedUser);
+    }
+    alert('User updated successfully');
+  } else {
+    alert('Failed to update user. Check console for details.');
+  }
+}
+
+// Handle user deletion
+async function handleDeleteUser(id) {
+  const success = await deleteUser(id);
+  if (success) {
+    if (selectedUser.value && selectedUser.value.id === id) {
+      clearSelection();
+    }
+    await fetchUsers();
+  }
+}
+
+// Handle user creation submission
+async function handleCreateUserSubmit({ email, password, error }: { email?: string, password?: string, error?: string }) {
   if (error) {
     createUserError.value = error;
     return;
   }
-  createUser(email!, password!);
+  
+  const result = await createUser(email!, password!);
+  if (result.success) {
+    showCreateUser.value = false;
+    createUserError.value = null;
+    await fetchUsers();
+  } else {
+    createUserError.value = result.error || 'User creation failed';
+  }
 }
 
 function clearCreateUserError() {
   createUserError.value = null;
-}
-
-function clearSelection() {
-  creating.value = false;
-  selectedUser.value = null;
-  form.email = '';
-  form.role = '';
-  form.is_active = true;
-  form.created_at = '';
-  form.updated_at = '';
 }
 
 onMounted(() => { 

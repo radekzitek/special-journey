@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import auth, users
+from app.routers import auth, users, team_members
 from app.models import Base
 from app.database import engine
 
@@ -25,3 +25,4 @@ async def on_startup():
 
 app.include_router(auth.router)
 app.include_router(users.router)
+app.include_router(team_members.router)

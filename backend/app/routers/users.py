@@ -1,80 +1,145 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
-from app.dependencies import get_current_user
-from app.database import get_db
-from app.models import User
-from app.schemas import UserUpdate, UserOut, UserCreate
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
 
-router = APIRouter(prefix="/users", tags=["users"])
+from .. import crud, models, schemas
+from ..dependencies import get_db, get_current_user, get_current_active_user
 
-@router.get("/me", response_model=UserOut)
-async def read_current_user(current_user: User = Depends(get_current_user)):
-    return current_user
+router = APIRouter(
+    prefix="/users",
+    tags=["users"],
+    responses={404: {"description": "Not found"}}
+)
 
-@router.put("/me", response_model=UserOut)
-async def update_current_user(
-    user_update: UserUpdate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+
+@router.get("/me", response_model=schemas.UserOut)
+def read_current_user(
+    current_user: models.User = Depends(get_current_active_user)
 ):
-    for field, value in user_update.dict(exclude_unset=True).items():
-        setattr(current_user, field, value)
-    await db.commit()
-    await db.refresh(current_user)
     return current_user
+
+
+@router.put("/me", response_model=schemas.UserOut)
+def update_current_user(
+    user_update: schemas.UserUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
+):
+    updated_user = crud.update_user(db, current_user.id, user_update)
+    return updated_user
+
 
 @router.delete("/me")
-async def delete_current_user(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+def delete_current_user(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
 ):
-    await db.delete(current_user)
-    await db.commit()
+    crud.delete_user(db, current_user.id)
     return {"msg": "User deleted"}
 
-# --- CRUD for all users (admin only in real app, open for now) ---
-@router.get("/", response_model=list[UserOut])
-async def list_users(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User))
-    return result.scalars().all()
 
-@router.get("/{user_id}", response_model=UserOut)
-async def get_user(user_id: int, db: AsyncSession = Depends(get_db)):
-    user = await db.get(User, user_id)
+@router.get("/", response_model=list[schemas.UserOut])
+def read_users(
+    skip: int = 0, 
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
+):
+    # Only admins can list all users
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Not enough permissions"
+        )
+    
+    users = crud.get_users(db, skip=skip, limit=limit)
+    return users
+
+
+@router.get("/{user_id}", response_model=schemas.UserOut)
+def read_user(
+    user_id: int, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
+):
+    # Only admins can get other users
+    if current_user.role != "admin" and current_user.id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Not enough permissions"
+        )
+    
+    user = crud.get_user(db, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
-@router.post("/", response_model=UserOut)
-async def create_user(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
-    user = User(
-        email=user_in.email,
-        hashed_password="not_used_here",  # Set a dummy password or handle properly
-        role=user_in.role or "manager",
-        is_active=user_in.is_active if user_in.is_active is not None else True
-    )
-    db.add(user)
-    await db.commit()
-    await db.refresh(user)
-    return user
 
-@router.put("/{user_id}", response_model=UserOut)
-async def update_user(user_id: int, user_update: UserUpdate, db: AsyncSession = Depends(get_db)):
-    user = await db.get(User, user_id)
+@router.post("/", response_model=schemas.UserOut)
+def create_user(
+    user_in: schemas.UserCreate, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
+):
+    # Only admins can create users
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Not enough permissions"
+        )
+    
+    # Check if user with this email already exists
+    db_user = crud.get_user_by_email(db, email=user_in.email)
+    if db_user:
+        raise HTTPException(
+            status_code=400, 
+            detail="Email already registered"
+        )
+    
+    return crud.create_user(db=db, user=user_in)
+
+
+@router.put("/{user_id}", response_model=schemas.UserOut)
+def update_user(
+    user_id: int, 
+    user_update: schemas.UserUpdate, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
+):
+    # Only admins can update other users
+    if current_user.role != "admin" and current_user.id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Not enough permissions"
+        )
+    
+    user = crud.update_user(db, user_id, user_update)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    for field, value in user_update.dict(exclude_unset=True).items():
-        setattr(user, field, value)
-    await db.commit()
-    await db.refresh(user)
     return user
+
 
 @router.delete("/{user_id}")
-async def delete_user(user_id: int, db: AsyncSession = Depends(get_db)):
-    user = await db.get(User, user_id)
-    if not user:
+def delete_user(
+    user_id: int, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
+):
+    # Only admins can delete other users
+    if current_user.role != "admin" and current_user.id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Not enough permissions"
+        )
+    
+    # Prevent deleting yourself through this endpoint (use /me endpoint instead)
+    if current_user.id == user_id:
+        raise HTTPException(
+            status_code=400, 
+            detail="Cannot delete yourself through this endpoint, use DELETE /users/me instead"
+        )
+    
+    success = crud.delete_user(db, user_id)
+    if not success:
         raise HTTPException(status_code=404, detail="User not found")
-    await db.delete(user)
-    await db.commit()
+    
     return {"msg": "User deleted"}
